@@ -1,0 +1,43 @@
+import duckdb
+import pyarrow as pa
+import pyarrow.flight as flight
+
+class DuckDBFlightServer(flight.FlightServerBase):
+
+    def __init__(self, location="grpc://localhost:8815", db_path="duck_flight.db"):
+        super().__init__(location)
+        self.db_path = db_path
+        self.conn = duckdb.connect(db_path)
+
+    def do_get(self, context, ticket):
+        query = ticket.ticket.decode("utf-8")
+        result_table = self.conn.execute(query).fetch_arrow_table()
+        batches = result_table.to_batches(max_chunksize=1024)
+        return flight.RecordBatchStream(pa.Table.from_batches(batches))
+    
+    def do_put(self, context, descriptor, reader, writer):
+        table = reader.read_all()
+        table_name = descriptor.path[0].decode('utf-8')
+
+        self.conn.execute(f"""
+            CREATE TABLE IF NOT EXISTS {table_name} (
+                batch_id BIGINT,
+                timestamp VARCHAR,
+                value DOUBLE,
+                category VARCHAR
+            )
+        """)
+
+        batches = table.to_batches(max_chunksize=1024)
+        aligned_table = pa.Table.from_bathes(batches)
+        self.conn.register("temp_table", aligned_table)
+
+        self.conn.execute(f"INSERT INTO {table_name} SELECT * FROM temp_table")
+
+    def do_action(self, context, action):
+        if action.type == "query":
+            query = action.body.to_pybytes().decode("utf-8")
+            self.conn.execute(query)
+            return []
+        else:
+            raise NotImplementedError(f"Unknown action type: {action.type}")
