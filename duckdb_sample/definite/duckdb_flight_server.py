@@ -29,7 +29,7 @@ class DuckDBFlightServer(flight.FlightServerBase):
         """)
 
         batches = table.to_batches(max_chunksize=1024)
-        aligned_table = pa.Table.from_bathes(batches)
+        aligned_table = pa.Table.from_batches(batches)
         self.conn.register("temp_table", aligned_table)
 
         self.conn.execute(f"INSERT INTO {table_name} SELECT * FROM temp_table")
@@ -41,3 +41,8 @@ class DuckDBFlightServer(flight.FlightServerBase):
             return []
         else:
             raise NotImplementedError(f"Unknown action type: {action.type}")
+
+if __name__ == "__main__":
+    server = DuckDBFlightServer()
+    print("Starting DuckDB Flight server on localhost:8815")
+    server.serve()
