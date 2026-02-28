@@ -67,7 +67,7 @@ RC PF_HashTable::Delete(int fd, PageNum pageNum) {
     int bucket = Hash(fd, pageNum);
 
     PF_HashEntry *entry;
-    for (entry = hashTable[bucket]; entry != nullptr; entry = entry->prev) {
+    for (entry = hashTable[bucket]; entry != nullptr; entry = entry->next) {
         if (entry->fd == fd && entry->pageNum == pageNum)
             break;
     }
