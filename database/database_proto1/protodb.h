@@ -9,6 +9,8 @@
 
 typedef int RC;
 
+#define OK_RC 0
+
 #define START_PF_ERR  (-1)
 #define END_PF_ERR    (-100)
 #define START_RM_ERR  (-101)

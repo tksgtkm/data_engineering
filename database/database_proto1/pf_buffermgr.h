@@ -38,7 +38,7 @@ public:
 
     RC ResizeBuffer(int iNewSize);
 
-    RC GetBLockSize(int &length) const;
+    RC GetBlockSize(int &length) const;
 
     RC AllocateBlock(char *&buffer);
 

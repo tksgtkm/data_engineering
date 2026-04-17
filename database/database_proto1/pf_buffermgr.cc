@@ -216,3 +216,14 @@ RC PF_BufferMgr::InitPageDesc(int fd, PageNum pageNum, int slot) {
 
     return 0;
 }
+
+#define MEMORY_FD -1
+
+RC PF_BufferMgr::GetBlockSize(int &length) const {
+    length = pageSize;
+    return OK_RC;
+}
+
+RC PF_BufferMgr::AllocateBlock(char *&buffer) {
+    
+}
