@@ -33,6 +33,9 @@ typedef int RC;
 #define START_QL_WARN  401
 #define END_QL_WARN    500
 
+
+const int ALL_PAGES = -1;
+
 #ifndef BOOLEAN
 typedef char Boolean;
 #endif
