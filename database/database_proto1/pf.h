@@ -106,6 +106,8 @@ private:
     int unixfd;
 };
 
+void PF_PrintError(RC rc);
+
 #define PF_PAGEPINNED      (START_PF_WARN + 0)
 #define PF_PAGENOTINBUF    (START_PF_WARN + 1)
 #define PF_INVALIDPAGE     (START_PF_WARN + 2)

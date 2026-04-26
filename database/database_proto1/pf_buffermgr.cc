@@ -93,7 +93,144 @@ RC PF_BufferMgr::GetPage(int fd, PageNum pageNum, char **ppBuffer, int bMultiple
     if ((rc = hashTable.Find(fd, pageNum, slot)) && (rc != PF_HASHNOTFOUND))
         return rc;
     
+    if (rc == PF_HASHNOTFOUND) {
+        if ((rc == InternalAlloc(slot)))
+            return rc;
+
+        if ((rc = ReadPage(fd, pageNum, bufTable[slot].pData)) || (rc = hashTable.Insert(fd, pageNum, slot)) || (rc = InitPageDesc(fd, pageNum, slot))) {
+            Unlink(slot);
+            InsertFree(slot);
+            return rc;
+        }
+    } else {
+        if (!bMultiplePins && bufTable[slot].pinCount > 0)
+            return PF_PAGEPINNED;
+
+        bufTable[slot].pinCount++;
+
+        if ((rc = Unlink(slot)) || (rc = LinkHead(slot)))
+            return rc;
+    }
+
+    *ppBuffer = bufTable[slot].pData;
+
+    return 0;
+}
+
+RC PF_BufferMgr::AllocatePage(int fd, PageNum pageNum, char **ppBuffer) {
+    RC rc;
+    int slot;
+
+    if (!(rc = hashTable.Find(fd, pageNum, slot)))
+        return PF_PAGEINBUF;
+    else if (rc != PF_HASHNOTFOUND)
+        return rc;
+
+    if ((rc = InternalAlloc(slot)))
+        return rc;
+
+    if ((rc = hashTable.Insert(fd, pageNum, slot)) || (rc = InitPageDesc(fd, pageNum, slot))) {
+        Unlink(slot);
+        InsertFree(slot);
+        return rc;
+    }
+
+    *ppBuffer = bufTable[slot].pData;
+
+    return 0;
+}
+
+RC PF_BufferMgr::MarkDirty(int fd, PageNum pageNum) {
+    RC rc;
+    int slot;
+
+    if ((rc = hashTable.Find(fd, pageNum, slot))) {
+        if ((rc == PF_HASHNOTFOUND))
+            return PF_PAGENOTINBUF;
+        else
+            return rc;
+    }
+
+    if (bufTable[slot].pinCount == 0)
+        return PF_PAGEUNPINNED;
     
+    bufTable[slot].bDirty = TRUE;
+
+    if ((rc = Unlink(slot)) || (rc = LinkHead(slot)))
+        return rc;
+    
+    return 0;
+}
+
+RC PF_BufferMgr::UnpinPage(int fd, PageNum pageNum) {
+    RC rc;
+    int slot;
+
+    if ((rc = hashTable.Find(fd, pageNum, slot))) {
+        if ((rc == PF_HASHNOTFOUND))
+            return PF_PAGENOTINBUF;
+        else
+            return rc;
+    }
+
+    if (bufTable[slot].pinCount == 0)
+        return PF_PAGEUNPINNED;
+    
+    if (--(bufTable[slot].pinCount) == 0) {
+        if ((rc = Unlink(slot)) || (rc = LinkHead(slot)))
+            return rc;
+    }
+
+    return 0;
+}
+
+RC PF_BufferMgr::FlushPages(int fd) {
+    RC rc, rcWarn = 0;
+
+    int slot = first;
+    
+    while (slot != INVALID_SLOT) {
+        int next = bufTable[slot].next;
+
+        if (bufTable[slot].fd == fd) {
+            if (bufTable[slot].pinCount) {
+                rcWarn = PF_PAGEPINNED;
+            } else {
+                if (bufTable[slot].bDirty) {
+                    if ((rc = WritePage(fd, bufTable[slot].pageNum, bufTable[slot].pData)))
+                        return rc;
+                    bufTable[slot].bDirty = FALSE;
+                }
+
+                if ((rc = hashTable.Delete(fd, bufTable[slot].pageNum)) || (rc = Unlink(slot)) || (rc = InsertFree(slot)))
+                    return rc;
+            }
+        }
+        slot = next;
+    }
+
+    return rcWarn;
+}
+
+RC PF_BufferMgr::ForcePages(int fd, PageNum pageNum) {
+    RC rc;
+
+    int slot = first;
+    while (slot != INVALID_SLOT) {
+        int next = bufTable[slot].next;
+
+        if (bufTable[slot].fd == fd && (pageNum==ALL_PAGES || bufTable[slot].pageNum == pageNum)) {
+            if (bufTable[slot].bDirty) {
+                if ((rc = WritePage(fd, bufTable[slot].pageNum, bufTable[slot].pData)))
+                    return rc;
+                bufTable[slot].bDirty = FALSE;
+            }
+        }
+
+        slot = next;
+    }
+
+    return 0;
 }
 
 RC PF_BufferMgr::InsertFree(int slot) {
@@ -118,7 +255,7 @@ RC PF_BufferMgr::LinkHead(int slot) {
     return 0;
 }
 
-RC PF_BufferMgr::UnLink(int slot) {
+RC PF_BufferMgr::Unlink(int slot) {
     if (first == slot)
         first = bufTable[slot].next;
     
@@ -158,7 +295,7 @@ RC PF_BufferMgr::InternalAlloc(int &slot) {
             bufTable[slot].bDirty = FALSE;
         }
 
-        if ((rc = hashTable.Delete(bufTable[slot].fd, bufTable[slot].pageNum)) || (rc = UnLink(slot)))
+        if ((rc = hashTable.Delete(bufTable[slot].fd, bufTable[slot].pageNum)) || (rc = Unlink(slot)))
             return rc;
     }
 
