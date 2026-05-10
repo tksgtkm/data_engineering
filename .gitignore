@@ -215,4 +215,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-datasets/
+duckdb_sample/remote_access/datasets/
+
+.env
