@@ -233,6 +233,109 @@ RC PF_BufferMgr::ForcePages(int fd, PageNum pageNum) {
     return 0;
 }
 
+RC PF_BufferMgr::PrintBuffer() {
+    std::cout << "Buffer contains " << numPages << " pages of size " << pageSize << ".\n";
+    std::cout << "Contents in order from most recently used to " << "least recently used.\n";
+
+   int slot, next;
+   slot = first;
+   while (slot != INVALID_SLOT) {
+      next = bufTable[slot].next;
+      std::cout << slot << " :: \n";
+      std::cout << "  fd = " << bufTable[slot].fd << "\n";
+      std::cout << "  pageNum = " << bufTable[slot].pageNum << "\n";
+      std::cout << "  bDirty = " << bufTable[slot].bDirty << "\n";
+      std::cout << "  pinCount = " << bufTable[slot].pinCount << "\n";
+      slot = next;
+   }
+
+   if (first==INVALID_SLOT)
+      std::cout << "Buffer is empty!\n";
+   else
+      std::cout << "All remaining slots are free.\n";
+
+   return 0;
+}
+
+RC PF_BufferMgr::ClearBuffer() {
+    RC rc;
+
+    int slot, next;
+    slot = first;
+    while (slot != INVALID_SLOT) {
+        next = bufTable[slot].next;
+        if (bufTable[slot].pinCount == 0) {
+            if ((rc = hashTable.Delete(bufTable[slot].fd, bufTable[slot].pageNum)) || (rc = Unlink(slot)) || (rc = InsertFree(slot)))
+                return rc;
+        }
+        slot = next;
+    }
+
+    return 0;
+}
+
+RC PF_BufferMgr::ResizeBuffer(int iNewSize) {
+    int i;
+    RC rc;
+
+    ClearBuffer();
+
+    PF_BufPageDesc *pNewBufTable = new PF_BufPageDesc[iNewSize];
+
+    for (i = 0; i < iNewSize; i++) {
+        if ((pNewBufTable[i].pData = new char[pageSize]) == NULL) {
+            std::cerr << "Not enough memory for buffer\n";
+            exit(1);
+        }
+
+        memset((void *)pNewBufTable[i].pData, 0, pageSize);
+
+        pNewBufTable[i].prev = i - 1;
+        pNewBufTable[i].next = i + 1;
+    }
+    pNewBufTable[0].prev = pNewBufTable[iNewSize - 1].next = INVALID_SLOT;
+
+    int oldFirst = first;
+    PF_BufPageDesc *pOldBufTable = bufTable;
+
+    numPages = iNewSize;
+    first = last = INVALID_SLOT;
+    free = 0;
+
+    bufTable = pNewBufTable;
+
+    int slot, next, newSlot;
+    slot = oldFirst;
+    while (slot != INVALID_SLOT) {
+        next = pOldBufTable[slot].next;
+
+        if ((rc = hashTable.Delete(pOldBufTable[slot].fd, pOldBufTable[slot].pageNum)))
+            return rc;
+        slot = next;
+    }
+
+    slot = oldFirst;
+    while (slot != INVALID_SLOT) {
+        next = pOldBufTable[slot].next;
+
+        if ((rc = InternalAlloc(newSlot)))
+            return rc;
+        
+        if ((rc = hashTable.Insert(pOldBufTable[slot].fd, pOldBufTable[slot].pageNum, newSlot)) || 
+            (rc = InitPageDesc(pOldBufTable[slot].fd, pOldBufTable[slot].pageNum, newSlot)))
+            return rc;
+        
+        Unlink(newSlot);
+        InsertFree(newSlot);
+
+        slot = next;
+    }
+
+    delete [] pOldBufTable;
+
+    return 0;
+}
+
 RC PF_BufferMgr::InsertFree(int slot) {
     bufTable[slot].next  = free;
     free = slot;
@@ -362,5 +465,25 @@ RC PF_BufferMgr::GetBlockSize(int &length) const {
 }
 
 RC PF_BufferMgr::AllocateBlock(char *&buffer) {
+    RC rc = OK_RC;
+
+    int slot;
+    if ((rc = InternalAlloc(slot)) != OK_RC)
+        return rc;
     
+    PageNum pageNum = PageNum(reinterpret_cast<intptr_t>(bufTable[slot].pData));
+
+    if ((rc = hashTable.Insert(MEMORY_FD, pageNum, slot) != OK_RC) || (rc = InitPageDesc(MEMORY_FD, pageNum, slot)) != OK_RC) {
+        Unlink(slot);
+        InsertFree(slot);
+        return rc;
+    }
+
+    buffer = bufTable[slot].pData;
+
+    return OK_RC;
+}
+
+RC PF_BufferMgr::DisposeBlock(char* buffer) {
+    return UnpinPage(MEMORY_FD, PageNum(reinterpret_cast<intptr_t>(buffer)));
 }

@@ -54,7 +54,7 @@ public:
 
     RC AllocateBlock(char *&buffer);
 
-    RC DisposeBLock(char *buffer);
+    RC DisposeBlock(char *buffer);
 
 private:
     RC InsertFree(int slot);

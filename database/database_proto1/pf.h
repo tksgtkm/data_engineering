@@ -65,7 +65,7 @@ public:
     // 最初のページを取得する
     RC GetFirstPage(PF_PageHandle &pageHandle) const;
     // 現在のページの次のページを取得する
-    RC GetThisPage(PageNum current, PF_PageHandle &pageHandle) const;
+    RC GetNextPage(PageNum current, PF_PageHandle &pageHandle) const;
     // 特定のページを取得する
     RC GetThisPage(PageNum pageNum, PF_PageHandle &pageHandle) const;
     // 最後のページを取得する
@@ -104,6 +104,28 @@ private:
     int bHdrChanged;
     // OSファイル記述子
     int unixfd;
+};
+
+class PF_Manager {
+public:
+    PF_Manager();
+    ~PF_Manager();
+    RC CreateFile(const char *fileName);
+    RC DestroyFile(const char *fileName);
+
+    RC OpenFile(const char *fileName, PF_FileHandle &fieldHandle);
+    RC CloseFile(PF_FileHandle &fileHandle);
+
+    RC ClearBuffer();
+    RC PrintBuffer();
+    RC ResizeBuffer(int iNewSize);
+
+    RC GetBlockSize(int &length) const;
+    RC AllocateBlock(char *&buffer);
+    RC DisposeBlock(char *buffer);
+
+private:
+    PF_BufferMgr *pBufferMgr;
 };
 
 void PF_PrintError(RC rc);
