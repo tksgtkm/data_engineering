@@ -9,6 +9,8 @@
 
 typedef int RC;
 
+#define OK_RC 0
+
 #define START_PF_ERR  (-1)
 #define END_PF_ERR    (-100)
 #define START_RM_ERR  (-101)
@@ -30,5 +32,24 @@ typedef int RC;
 #define END_SM_WARN    400
 #define START_QL_WARN  401
 #define END_QL_WARN    500
+
+
+const int ALL_PAGES = -1;
+
+#ifndef BOOLEAN
+typedef char Boolean;
+#endif
+
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+
+#ifndef NULL
+#define NULL 0
+#endif
 
 #endif
