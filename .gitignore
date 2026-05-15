@@ -218,3 +218,5 @@ __marimo__/
 duckdb_sample/remote_access/datasets/
 
 .env
+
+www/
