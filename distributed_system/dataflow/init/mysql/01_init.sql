@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS sample_events (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    event_type VARCHAR(50) NOT NULL,
+    payload JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
