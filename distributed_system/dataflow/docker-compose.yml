@@ -1,0 +1,66 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: dataflow_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: dataflow
+      MYSQL_USER: dataflow_user
+      MYSQL_PASSWORD: dataflow_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init/mysql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16
+    container_name: dataflow_postgres
+    environment:
+      POSTGRES_DB: dataflow
+      POSTGRES_USER: dataflow_user
+      POSTGRES_PASSWORD: dataflow_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init/postgres:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataflow_user -d dataflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  python:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    container_name: dataflow_python
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB: dataflow
+      MYSQL_USER: dataflow_user
+      MYSQL_PASSWORD: dataflow_pass
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: dataflow
+      POSTGRES_USER: dataflow_user
+      POSTGRES_PASSWORD: dataflow_pass
+    volumes:
+      - ./scripts:/app/scripts
+    depends_on:
+      mysql:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    command: ["tail", "-f", "/dev/null"]
+
+volumes:
+  mysql_data:
+  postgres_data:
