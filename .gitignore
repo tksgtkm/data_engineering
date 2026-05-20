@@ -220,3 +220,11 @@ duckdb_sample/remote_access/datasets/
 .env
 
 www/
+
+# dbt duckdb 関連
+target/
+dbt_packages/
+logs/
+*.wal
+*.backup
+*.duckdb
