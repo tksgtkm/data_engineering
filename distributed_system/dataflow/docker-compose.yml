@@ -52,8 +52,9 @@ services:
       POSTGRES_DB: dataflow
       POSTGRES_USER: dataflow_user
       POSTGRES_PASSWORD: dataflow_pass
+      DBT_PROFILES_DIR: /app
     volumes:
-      - ./scripts:/app/scripts
+      - .:/app
     depends_on:
       mysql:
         condition: service_healthy
