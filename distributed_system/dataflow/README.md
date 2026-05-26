@@ -14,8 +14,18 @@ dataflow/
 ├── init/
 │   ├── mysql/01_init.sql    # MySQL 初期スキーマ
 │   └── postgres/01_init.sql # PostgreSQL 初期スキーマ
-└── scripts/
-    └── db_check.py          # 接続確認スクリプト
+├── scripts/
+│   └── db_check.py          # 接続確認スクリプト
+├── parquet_files/           # bronze モデルの入力データ
+└── dbt_project/             # dbt プロジェクト一式
+    ├── dbt_project.yml
+    ├── profiles.yml
+    ├── packages.yml
+    ├── models/              # bronze / silver / gold
+    ├── macros/
+    ├── seeds/
+    ├── data_tests/
+    └── snapshots/
 ```
 
 ## 起動・停止
@@ -68,26 +78,34 @@ docker exec -it dataflow_mysql mysql -u dataflow_user -pdataflow_pass dataflow
 docker exec -it dataflow_postgres psql -U dataflow_user -d dataflow
 
 # DuckDB（dbt のビルド成果物 dataflow.duckdb に接続）
-docker exec -it -w /app dataflow_python duckdb dataflow.duckdb
+docker exec -it -w /app/dbt_project dataflow_python duckdb dataflow.duckdb
 ```
 
 ## dbt の実行
 
 `dbt-core` / `dbt-duckdb` は `dataflow_python` コンテナにインストール済みです。
-`profiles.yml` はプロジェクト直下にあるため、`--profiles-dir .` を付けて実行します。
+dbt プロジェクト一式は `dbt_project/` 配下にまとまっており、`profiles.yml` も同じ場所にあります（`DBT_PROFILES_DIR=/app/dbt_project` を環境変数で設定済み）。コンテナ内ではこのディレクトリに移動して実行します。
 
 ```bash
 # パッケージ取得（packages.yml）
-docker exec -w /app dataflow_python dbt deps --profiles-dir .
+docker exec -w /app/dbt_project dataflow_python dbt deps
 
 # 接続確認
-docker exec -w /app dataflow_python dbt debug --profiles-dir .
+docker exec -w /app/dbt_project dataflow_python dbt debug
 
 # seed → run → test を一括で実行
-docker exec -w /app dataflow_python dbt build --profiles-dir .
+docker exec -w /app/dbt_project dataflow_python dbt build
 ```
 
-ビルドに成功すると、プロジェクト直下に `dataflow.duckdb` が生成されます。
+ビルドに成功すると `dbt_project/dataflow.duckdb` が生成されます。`target/` / `dbt_packages/` / `logs/` などの dbt 生成物もすべて `dbt_project/` 配下に作られます（いずれも `.gitignore` 対象）。
+
+### 初回セットアップの流れ
+
+```bash
+docker compose up -d --build                                 # ① コンテナ起動
+docker exec -w /app/dbt_project dataflow_python dbt deps     # ② 依存パッケージ取得
+docker exec -w /app/dbt_project dataflow_python dbt build    # ③ seed / run / test 一括
+```
 
 ## DuckDB CLI の使い方
 
@@ -95,22 +113,22 @@ docker exec -w /app dataflow_python dbt build --profiles-dir .
 
 ```bash
 # 対話シェル（.tables / .schema <table> / .quit などが使える）
-docker exec -it -w /app dataflow_python duckdb dataflow.duckdb
+docker exec -it -w /app/dbt_project dataflow_python duckdb dataflow.duckdb
 
 # ワンライナーで SQL を実行
-docker exec -w /app dataflow_python duckdb dataflow.duckdb \
+docker exec -w /app/dbt_project dataflow_python duckdb dataflow.duckdb \
     -c "SELECT * FROM user_metrics_final_report LIMIT 5;"
 
 # 出力フォーマットを切り替える
-docker exec -w /app dataflow_python duckdb dataflow.duckdb -markdown -c "..."
-docker exec -w /app dataflow_python duckdb dataflow.duckdb -csv      -c "..."
-docker exec -w /app dataflow_python duckdb dataflow.duckdb -json     -c "..."
+docker exec -w /app/dbt_project dataflow_python duckdb dataflow.duckdb -markdown -c "..."
+docker exec -w /app/dbt_project dataflow_python duckdb dataflow.duckdb -csv      -c "..."
+docker exec -w /app/dbt_project dataflow_python duckdb dataflow.duckdb -json     -c "..."
 ```
 
 ホスト側 `~/.bashrc` などにエイリアスを切っておくと短く呼べます。
 
 ```bash
-alias duck='docker exec -it -w /app dataflow_python duckdb dataflow.duckdb'
+alias duck='docker exec -it -w /app/dbt_project dataflow_python duckdb dataflow.duckdb'
 # duck                          ... 対話シェル
 # duck -c "SELECT 1;"           ... ワンライナー実行
 ```
