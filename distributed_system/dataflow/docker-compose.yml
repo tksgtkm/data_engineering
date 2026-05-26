@@ -52,7 +52,7 @@ services:
       POSTGRES_DB: dataflow
       POSTGRES_USER: dataflow_user
       POSTGRES_PASSWORD: dataflow_pass
-      DBT_PROFILES_DIR: /app
+      DBT_PROFILES_DIR: /app/dbt_project
     volumes:
       - .:/app
     depends_on:
