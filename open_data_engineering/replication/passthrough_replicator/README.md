@@ -6,7 +6,7 @@
 
 ```bash
 cd docker
-mkdir -p /tmp/dedp/ch02/replication/passthrough-replicator/input
+mkdir -p /tmp/dedp/replication/passthrough-replicator/input
 docker-compose down --volumes; docker-compose up
 ```
 
