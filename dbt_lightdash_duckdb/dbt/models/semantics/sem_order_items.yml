@@ -1,0 +1,41 @@
+semantic_models:
+  - name: order_items
+    description: 注文明細（1行=1明細）
+    model: ref('fct_order_items')
+    defaults:
+      agg_time_dimension: ordered_at
+
+    entities:
+      - name: order_item
+        type: primary
+        expr: order_item_id
+      - name: order
+        type: foreign
+        expr: order_id
+      - name: product
+        type: foreign
+        expr: product_id
+
+    dimensions:
+      - name: ordered_at
+        type: time
+        type_params:
+          time_granularity: day
+      - name: is_discounted
+        type: categorical
+
+    measures:
+      - name: line_count
+        agg: count
+        expr: order_item_id
+      - name: items_sold
+        description: 販売点数
+        agg: sum
+        expr: quantity
+      - name: item_revenue
+        description: 明細ベースの売上
+        agg: sum
+        expr: line_amount
+      - name: discounted_lines
+        agg: sum_boolean
+        expr: is_discounted
