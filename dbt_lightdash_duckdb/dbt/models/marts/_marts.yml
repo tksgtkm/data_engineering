@@ -1,0 +1,105 @@
+models:
+  - name: fct_orders
+    description: 注文粒度のファクト（1行=1注文）
+    config:
+      meta:
+        label: 注文
+        # Lightdash の join は明示的に書く（MetricFlow の entity join は Lightdash では読まれない）
+        joins:
+          - join: dim_customers
+            sql_on: ${fct_orders.customer_id} = ${dim_customers.customer_id}
+            type: left
+            relationship: many-to-one
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: customer_id
+        data_tests: [not_null]
+      - name: ordered_at
+        description: 注文日
+        config:
+          meta:
+            dimension:
+              type: date
+              time_intervals: [DAY, WEEK, MONTH, QUARTER, YEAR]
+      - name: status
+      - name: channel
+      - name: is_completed
+      - name: is_first_order
+      - name: order_total
+        description: 注文合計（割引後, 円）
+        config:
+          meta:
+            dimension:
+              format: '¥#,##0'
+      - name: item_quantity
+      - name: line_count
+
+  - name: fct_order_items
+    description: 明細粒度のファクト（1行=1注文明細）
+    config:
+      meta:
+        label: 注文明細
+        joins:
+          - join: dim_products
+            sql_on: ${fct_order_items.product_id} = ${dim_products.product_id}
+            type: left
+            relationship: many-to-one
+          - join: dim_customers
+            sql_on: ${fct_order_items.customer_id} = ${dim_customers.customer_id}
+            type: left
+            relationship: many-to-one
+    columns:
+      - name: order_item_id
+        data_tests: [unique, not_null]
+      - name: order_id
+      - name: product_id
+      - name: customer_id
+      - name: ordered_at
+        config:
+          meta:
+            dimension:
+              type: date
+              time_intervals: [DAY, WEEK, MONTH, QUARTER, YEAR]
+      - name: status
+      - name: quantity
+      - name: unit_price
+      - name: discount_rate
+      - name: line_amount
+      - name: is_discounted
+
+  - name: dim_customers
+    description: 顧客ディメンション（1行=1顧客）
+    config:
+      meta:
+        label: 顧客
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]
+      - name: region
+        description: 地方（北海道〜九州）
+      - name: segment
+        description: consumer / business
+      - name: signed_up_at
+        config:
+          meta:
+            dimension:
+              type: date
+              time_intervals: [DAY, WEEK, MONTH, QUARTER, YEAR]
+      - name: first_ordered_at
+      - name: last_ordered_at
+      - name: order_count
+      - name: lifetime_value
+      - name: customer_tier
+
+  - name: dim_products
+    description: 商品ディメンション
+    config:
+      meta:
+        label: 商品
+    columns:
+      - name: product_id
+        data_tests: [unique, not_null]
+      - name: product_name
+      - name: category
+      - name: list_price
