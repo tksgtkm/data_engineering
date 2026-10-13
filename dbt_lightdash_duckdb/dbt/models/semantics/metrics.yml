@@ -1,0 +1,202 @@
+# メトリクス定義（Single Source of Truth）
+#
+# [MF+LD] … MetricFlow でも Lightdash でも使える（Lightdash が自動変換）
+# [MF only] … MetricFlow（mf query / dbt Semantic Layer）でのみ使える。
+#             Lightdash の deploy 時には warning を出してスキップされる。
+metrics:
+  # ---------- orders: simple ----------
+  - name: revenue                       # [MF+LD]
+    label: 売上
+    description: 割引後の注文合計
+    type: simple
+    type_params:
+      measure: revenue
+    config:
+      meta:
+        group_label: 売上
+
+  - name: order_count                   # [MF+LD]
+    label: 注文数
+    type: simple
+    type_params:
+      measure: order_count
+    config:
+      meta:
+        group_label: 注文
+
+  - name: completed_orders              # [MF+LD] sum_boolean
+    label: 完了注文数
+    type: simple
+    type_params:
+      measure: completed_orders
+    config:
+      meta:
+        group_label: 注文
+
+  - name: completed_revenue             # [MF+LD] 同一モデルの Dimension フィルタ → CASE WHEN
+    label: 完了売上
+    description: status = completed の注文だけの売上
+    type: simple
+    type_params:
+      measure: revenue
+    filter: |
+      {{ Dimension('order__status') }} = 'completed'
+    config:
+      meta:
+        group_label: 売上
+
+  - name: ordering_customers            # [MF+LD]
+    label: 注文顧客数
+    type: simple
+    type_params:
+      measure: ordering_customers
+    config:
+      meta:
+        group_label: 顧客
+
+  - name: median_order_value            # [MF+LD]
+    label: 注文単価（中央値）
+    type: simple
+    type_params:
+      measure: median_order_total
+    config:
+      meta:
+        group_label: 売上
+
+  - name: p90_order_value               # [MF+LD] percentile（0-1 は Lightdash 側で 0-100 に正規化される）
+    label: 注文単価（P90）
+    type: simple
+    type_params:
+      measure: p90_order_total
+    config:
+      meta:
+        group_label: 売上
+
+  # ---------- orders: ratio / derived（同一モデル内なので Lightdash でも使える） ----------
+  - name: average_order_value           # [MF+LD]
+    label: 平均注文単価（AOV）
+    type: ratio
+    type_params:
+      numerator: revenue
+      denominator: order_count
+    config:
+      meta:
+        group_label: 売上
+
+  - name: completion_rate               # [MF+LD] フィルタ付き分子
+    label: 注文完了率
+    type: ratio
+    type_params:
+      numerator:
+        name: order_count
+        filter: |
+          {{ Dimension('order__status') }} = 'completed'
+        alias: completed_order_count
+      denominator: order_count
+    config:
+      meta:
+        group_label: 注文
+
+  - name: revenue_per_customer          # [MF+LD]
+    label: 顧客あたり売上
+    type: derived
+    type_params:
+      expr: revenue / nullif(ordering_customers, 0)
+      metrics:
+        - name: revenue
+        - name: ordering_customers
+    config:
+      meta:
+        group_label: 顧客
+
+  # ---------- order_items ----------
+  - name: items_sold                    # [MF+LD]
+    label: 販売点数
+    type: simple
+    type_params:
+      measure: items_sold
+    config:
+      meta:
+        group_label: 商品
+
+  - name: item_revenue                  # [MF+LD]
+    label: 明細売上
+    type: simple
+    type_params:
+      measure: item_revenue
+    config:
+      meta:
+        group_label: 商品
+
+  - name: line_count                    # [MF+LD]
+    label: 明細数
+    type: simple
+    type_params:
+      measure: line_count
+    config:
+      meta:
+        group_label: 商品
+
+  - name: discounted_line_share         # [MF+LD]
+    label: 割引明細比率
+    type: ratio
+    type_params:
+      numerator: discounted_lines_metric
+      denominator: line_count
+    config:
+      meta:
+        group_label: 商品
+
+  - name: discounted_lines_metric       # 上の ratio 用の補助メトリクス
+    label: 割引明細数
+    type: simple
+    type_params:
+      measure: discounted_lines
+    config:
+      meta:
+        group_label: 商品
+        hidden: true
+
+  # ---------- MetricFlow でしか表現できないもの ----------
+  - name: cumulative_revenue            # [MF only] cumulative
+    label: 累積売上
+    type: cumulative
+    type_params:
+      measure: revenue
+
+  - name: revenue_mtd                   # [MF only] cumulative（月初来）
+    label: 当月累計売上
+    type: cumulative
+    type_params:
+      measure: revenue
+      cumulative_type_params:
+        grain_to_date: month
+
+  - name: revenue_last_month            # [MF only] offset_window の補助
+    label: 前月売上
+    type: derived
+    type_params:
+      expr: revenue_prev
+      metrics:
+        - name: revenue
+          offset_window: 1 month
+          alias: revenue_prev
+
+  - name: revenue_mom_growth            # [MF only] 前月比（offset_window）
+    label: 売上 前月比
+    type: derived
+    type_params:
+      expr: (revenue - revenue_prev) / nullif(revenue_prev, 0)
+      metrics:
+        - name: revenue
+        - name: revenue
+          offset_window: 1 month
+          alias: revenue_prev
+
+  - name: business_revenue              # [MF only] 別モデル（customers）の Dimension でフィルタ
+    label: 法人売上
+    type: simple
+    type_params:
+      measure: revenue
+    filter: |
+      {{ Dimension('customer__segment') }} = 'business'
