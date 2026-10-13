@@ -1,0 +1,54 @@
+ MetricFlow セマンティックモデル（legacy spec: dbt Core 1.6+ で動く書き方）
+semantic_models:
+  - name: orders
+    description: 注文（1行=1注文）
+    model: ref('fct_orders')
+    defaults:
+      agg_time_dimension: ordered_at
+
+    entities:
+      - name: order
+        type: primary
+        expr: order_id
+      - name: customer
+        type: foreign
+        expr: customer_id
+
+    dimensions:
+      - name: ordered_at
+        type: time
+        type_params:
+          time_granularity: day
+      - name: status
+        type: categorical
+      - name: channel
+        type: categorical
+      - name: is_first_order
+        type: categorical
+
+    measures:
+      - name: order_count
+        description: 注文件数
+        agg: count
+        expr: order_id
+      - name: revenue
+        description: 売上（割引後の注文合計）
+        agg: sum
+        expr: order_total
+      - name: completed_orders
+        description: 完了注文数
+        agg: sum_boolean
+        expr: is_completed
+      - name: ordering_customers
+        description: 注文した顧客のユニーク数
+        agg: count_distinct
+        expr: customer_id
+      - name: median_order_total
+        agg: median
+        expr: order_total
+      - name: p90_order_total
+        agg: percentile
+        expr: order_total
+        agg_params:
+          percentile: 0.9
+          use_discrete_percentile: false

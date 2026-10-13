@@ -1,0 +1,75 @@
+# すべて localhost で完結する構成（外部クラウドへの接続なし）
+#
+# lightdash     : Lightdash 本体（http://localhost:8080）
+# lightdash-db  : Lightdash 自身のメタデータ（ユーザー・チャート・ダッシュボード）用 Postgres
+# minio         : Lightdash が起動に必須とする S3 互換ストレージ。ローカルのコンテナで、AWS には繋がない
+#
+# 分析データ（DuckLake = SQLite カタログ + Parquet）は ./lake にあり、
+# ホストと「同じ絶対パス」で Lightdash コンテナにマウントする。
+# LAKE_DIR は Makefile が自動で設定する（手動なら export LAKE_DIR=$PWD/lake）。
+services:
+  lightdash-db:
+    image: pgvector/pgvector:pg15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - lightdash-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  minio:
+    image: coollabsio/minio:latest
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"   # MinIO console（任意）
+    volumes:
+      - ./docker/init-minio.sh:/init-minio.sh:ro
+      - minio-data:/data
+    entrypoint: ["/bin/sh", "/init-minio.sh"]
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_DEFAULT_BUCKETS: default
+
+  lightdash:
+    image: lightdash/lightdash:latest
+    platform: linux/amd64     # Apple Silicon では Rosetta 経由で動く
+    depends_on:
+      lightdash-db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    volumes:
+      # ホストと同じ絶対パスでマウントするのがポイント
+      # （dbt の profiles.yml に書いたパスを Lightdash もそのまま使えるようにする）
+      - ${LAKE_DIR:?LAKE_DIR is not set. Run via make, or export LAKE_DIR=$PWD/lake}:${LAKE_DIR}
+    environment:
+      PGHOST: lightdash-db
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: postgres
+      LIGHTDASH_SECRET: ${LIGHTDASH_SECRET}
+      LIGHTDASH_MIGRATION_EXECUTION_MODE: compose
+      SECURE_COOKIES: "false"
+      TRUST_PROXY: "false"
+      SITE_URL: http://localhost:8080
+      PORT: 8080
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: default
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_FORCE_PATH_STYLE: "true"
+      SCHEDULER_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8080:8080"
+
+volumes:
+  lightdash-db-data:
+  minio-data:

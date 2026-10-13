@@ -1,0 +1,24 @@
+# DuckDB + DuckLake（カタログ = SQLite ファイル, データ = ローカルの Parquet）
+#
+# LAKE_DIR は「絶対パス」で渡す（Makefile が $(CURDIR)/lake を自動で設定する）。
+# docker-compose.yml でも同じ絶対パスで Lightdash コンテナにマウントするので、
+# ホストの dbt / MetricFlow とコンテナの Lightdash が同じファイルを同じパスで読める。
+shop_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # セッション用 DB はメモリ上でよい（テーブル本体は下の DuckLake に書かれる）。
+      # ファイルにすると dbt と mf を同時に動かしたときにロックで衝突する
+      path: ":memory:"
+      extensions:
+        - ducklake
+        - sqlite
+      attach:
+        - path: "ducklake:sqlite:{{ env_var('LAKE_DIR') }}/catalog.sqlite"
+          alias: lake
+          options:
+            data_path: "{{ env_var('LAKE_DIR') }}/data/"
+      database: lake
+      schema: main
+      threads: 1
