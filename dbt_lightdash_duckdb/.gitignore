@@ -1,6 +1,0 @@
-.env
-.venv/
-lake/
-dbt/target/
-dbt/logs/
-dbt/dbt_packages/
