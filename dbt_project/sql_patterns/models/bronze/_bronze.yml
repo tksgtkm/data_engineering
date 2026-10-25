@@ -1,0 +1,309 @@
+version: 2
+
+models:
+  - name: comments
+    description: ""
+    columns:
+      - name: id
+        data_type: bigint
+        description: ""
+
+      - name: text
+        data_type: varchar
+        description: ""
+
+      - name: creation_date
+        data_type: timestamp
+        description: ""
+
+      - name: post_id
+        data_type: bigint
+        description: ""
+
+      - name: user_id
+        data_type: bigint
+        description: ""
+
+      - name: user_display_name
+        data_type: varchar
+        description: ""
+
+      - name: score
+        data_type: bigint
+        description: ""
+
+  - name: users
+    description: ""
+    columns:
+      - name: id
+        data_type: bigint
+        description: ""
+
+      - name: display_name
+        data_type: varchar
+        description: ""
+
+      - name: about_me
+        data_type: varchar
+        description: ""
+
+      - name: age
+        data_type: varchar
+        description: ""
+
+      - name: creation_date
+        data_type: timestamp
+        description: ""
+
+      - name: last_access_date
+        data_type: timestamp
+        description: ""
+
+      - name: location
+        data_type: varchar
+        description: ""
+
+      - name: reputation
+        data_type: bigint
+        description: ""
+
+      - name: up_votes
+        data_type: bigint
+        description: ""
+
+      - name: down_votes
+        data_type: bigint
+        description: ""
+
+      - name: views
+        data_type: bigint
+        description: ""
+
+      - name: profile_image_url
+        data_type: varchar
+        description: ""
+
+      - name: website_url
+        data_type: varchar
+        description: ""
+
+  - name: votes
+    description: ""
+    columns:
+      - name: id
+        data_type: bigint
+        description: ""
+
+      - name: creation_date
+        data_type: timestamp
+        description: ""
+
+      - name: post_id
+        data_type: bigint
+        description: ""
+
+      - name: vote_type_id
+        data_type: bigint
+        description: ""
+
+  - name: posts_answers
+    description: ""
+    columns:
+      - name: id
+        data_type: bigint
+        description: ""
+
+      - name: title
+        data_type: varchar
+        description: ""
+
+      - name: body
+        data_type: varchar
+        description: ""
+
+      - name: accepted_answer_id
+        data_type: varchar
+        description: ""
+
+      - name: answer_count
+        data_type: varchar
+        description: ""
+
+      - name: comment_count
+        data_type: bigint
+        description: ""
+
+      - name: community_owned_date
+        data_type: timestamp
+        description: ""
+
+      - name: creation_date
+        data_type: timestamp
+        description: ""
+
+      - name: favorite_count
+        data_type: varchar
+        description: ""
+
+      - name: last_activity_date
+        data_type: timestamp
+        description: ""
+
+      - name: last_edit_date
+        data_type: timestamp
+        description: ""
+
+      - name: last_editor_display_name
+        data_type: varchar
+        description: ""
+
+      - name: last_editor_user_id
+        data_type: bigint
+        description: ""
+
+      - name: owner_display_name
+        data_type: varchar
+        description: ""
+
+      - name: owner_user_id
+        data_type: bigint
+        description: ""
+
+      - name: parent_id
+        data_type: bigint
+        description: ""
+
+      - name: post_type_id
+        data_type: bigint
+        description: ""
+
+      - name: score
+        data_type: bigint
+        description: ""
+
+      - name: tags
+        data_type: varchar
+        description: ""
+
+      - name: view_count
+        data_type: varchar
+        description: ""
+
+  - name: post_history
+    description: ""
+    columns:
+      - name: id
+        data_type: bigint
+        description: ""
+
+      - name: creation_date
+        data_type: timestamp
+        description: ""
+
+      - name: post_id
+        data_type: bigint
+        description: ""
+
+      - name: post_history_type_id
+        data_type: bigint
+        description: ""
+
+      - name: revision_guid
+        data_type: varchar
+        description: ""
+
+      - name: user_id
+        data_type: bigint
+        description: ""
+
+      - name: text
+        data_type: varchar
+        description: ""
+
+      - name: comment
+        data_type: varchar
+        description: ""
+
+  - name: posts_questions
+    description: ""
+    columns:
+      - name: id
+        data_type: bigint
+        description: ""
+
+      - name: title
+        data_type: varchar
+        description: ""
+
+      - name: body
+        data_type: varchar
+        description: ""
+
+      - name: accepted_answer_id
+        data_type: bigint
+        description: ""
+
+      - name: answer_count
+        data_type: bigint
+        description: ""
+
+      - name: comment_count
+        data_type: bigint
+        description: ""
+
+      - name: community_owned_date
+        data_type: timestamp
+        description: ""
+
+      - name: creation_date
+        data_type: timestamp
+        description: ""
+
+      - name: favorite_count
+        data_type: bigint
+        description: ""
+
+      - name: last_activity_date
+        data_type: timestamp
+        description: ""
+
+      - name: last_edit_date
+        data_type: timestamp
+        description: ""
+
+      - name: last_editor_display_name
+        data_type: varchar
+        description: ""
+
+      - name: last_editor_user_id
+        data_type: bigint
+        description: ""
+
+      - name: owner_display_name
+        data_type: varchar
+        description: ""
+
+      - name: owner_user_id
+        data_type: bigint
+        description: ""
+
+      - name: parent_id
+        data_type: varchar
+        description: ""
+
+      - name: post_type_id
+        data_type: bigint
+        description: ""
+
+      - name: score
+        data_type: bigint
+        description: ""
+
+      - name: tags
+        data_type: varchar
+        description: ""
+
+      - name: view_count
+        data_type: bigint
+        description: ""
+
