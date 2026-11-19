@@ -1,0 +1,8 @@
+zakka_mall_duckdb:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DBT_DUCKDB_PATH', 'dbt_demo.duckdb') }}"
+      schema: analytics
+      threads: 4
