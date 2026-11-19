@@ -1,0 +1,376 @@
+version: 2
+
+sources:
+  - name: zakka_mall
+    description: "Zakka Mall OLTP業務システムのソースデータ"
+    schema: zakka_mall
+
+    tables:
+      - name: customer
+        description: "顧客テーブル"
+        columns:
+          - name: customer_id
+            description: "顧客ID"
+            data_tests:
+              - unique
+              - not_null
+          - name: email
+            description: "メールアドレス"
+            data_tests:
+              - unique
+              - not_null
+          - name: customer_name
+            data_tests:
+              - not_null
+          - name: registration_date
+            data_tests:
+              - not_null
+          - name: status
+            description: "ステータス（active: 有効, inactive: 無効, suspended: 一時停止）"
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['active', 'inactive', 'suspended']
+
+        config:
+          # loaded_at_field を指定してクエリベースで freshness を計算する
+          loaded_at_field: updated_at
+          freshness:
+            warn_after: {count: 1, period: day}
+            error_after: {count: 2, period: day}
+
+      - name: customer_address
+        description: "顧客住所テーブル"
+        columns:
+          - name: address_id
+            data_tests:
+              - unique
+              - not_null
+          - name: customer_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('zakka_mall', 'customer')
+                    field: customer_id
+          - name: address_type
+            description: "住所種別（shipping: 送り先, billing: 請求先, both: 両方）"
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['shipping', 'billing', 'both']
+          - name: postal_code
+            data_tests:
+              - not_null
+          - name: prefecture
+            data_tests:
+              - not_null
+          - name: city
+            data_tests:
+              - not_null
+          - name: address_line1
+            data_tests:
+              - not_null
+          - name: is_default
+            description: "デフォルト住所フラグ"
+            data_tests:
+              - not_null
+
+      - name: category
+        description: "商品カテゴリマスタテーブル"
+        columns:
+          - name: category_id
+            description: "カテゴリID"
+            data_tests:
+              - unique
+              - not_null
+          - name: category_code
+            description: "カテゴリコード"
+            data_tests:
+              - unique
+              - not_null
+          - name: category_name
+            description: "カテゴリ名"
+            data_tests:
+              - not_null
+          - name: parent_category_id
+            description: "親カテゴリID"
+            data_tests:
+              - relationships:
+                  arguments:
+                    to: source('zakka_mall', 'category')
+                    field: category_id
+          - name: description
+            description: "カテゴリ説明"
+          - name: is_active
+            description: "有効フラグ"
+            data_tests:
+              - not_null
+          - name: category_path
+            description: "階層パス（例：electronics.computers.laptops）"
+          - name: created_at
+            description: "作成日時"
+            data_tests:
+              - not_null
+          - name: updated_at
+            description: "更新日時"
+            data_tests:
+              - not_null
+
+      - name: supplier
+        description: "仕入先マスタテーブル"
+        columns:
+          - name: supplier_id
+            description: "仕入先ID"
+            data_tests:
+              - unique
+              - not_null
+          - name: supplier_code
+            description: "仕入先コード"
+            data_tests:
+              - unique
+              - not_null
+          - name: supplier_name
+            description: "仕入先名"
+            data_tests:
+              - not_null
+          - name: contact_email
+            description: "担当者メールアドレス"
+          - name: contact_phone
+            description: "担当者電話番号"
+          - name: address
+            description: "住所"
+          - name: status
+            description: "ステータス（active: 有効, inactive: 無効, pending: 保留）"
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['active', 'inactive', 'pending']
+          - name: created_at
+            description: "作成日時"
+            data_tests:
+              - not_null
+          - name: updated_at
+            description: "更新日時"
+            data_tests:
+              - not_null
+          - name: contact_details
+            description: "担当者詳細情報（JSONB）"
+
+      - name: product
+        description: "商品マスタテーブル"
+        columns:
+          - name: product_id
+            data_tests:
+              - unique
+              - not_null
+          - name: product_code
+            data_tests:
+              - unique
+              - not_null
+          - name: sku
+            description: "SKU（在庫管理単位）"
+            data_tests:
+              - unique
+              - not_null
+          - name: category_id
+            description: "カテゴリID（外部キー）"
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('zakka_mall', 'category')
+                    field: category_id
+          - name: supplier_id
+            description: "仕入先ID（外部キー）"
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('zakka_mall', 'supplier')
+                    field: supplier_id
+          - name: status
+            description: "ステータス（active: 有効, inactive: 無効, discontinued: 廃止）"
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['active', 'inactive', 'discontinued']
+
+      - name: inventory
+        description: "在庫テーブル"
+        columns:
+          - name: inventory_id
+            data_tests:
+              - unique
+              - not_null
+          - name: product_id
+            data_tests:
+              - unique
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('zakka_mall', 'product')
+                    field: product_id
+          - name: quantity_on_hand
+            description: "現在庫数"
+            data_tests:
+              - not_null
+          - name: quantity_reserved
+            description: "予約在庫数"
+            data_tests:
+              - not_null
+          - name: reorder_level
+            description: "発注点"
+            data_tests:
+              - not_null
+          - name: reorder_quantity
+            description: "発注数量"
+            data_tests:
+              - not_null
+
+      - name: order
+        description: "注文テーブル"
+        columns:
+          - name: order_id
+            data_tests:
+              - unique
+              - not_null
+          - name: customer_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('zakka_mall', 'customer')
+                    field: customer_id
+          - name: shipping_address_id
+            description: "配送先住所ID"
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('zakka_mall', 'customer_address')
+                    field: address_id
+          - name: billing_address_id
+            description: "請求先住所ID"
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('zakka_mall', 'customer_address')
+                    field: address_id
+          - name: order_number
+            description: "注文番号"
+            data_tests:
+              - unique
+              - not_null
+          - name: order_status
+            description: "注文ステータス（pending: 保留, processing: 処理中, shipped: 出荷済, delivered: 配達済, cancelled: キャンセル, refunded: 返金済）"
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded']
+          - name: order_metadata
+            description: "注文メタデータ"
+
+        config:
+          # loaded_at_field を指定してクエリベースで freshness を計算する
+          loaded_at_field: updated_at
+          freshness:
+            warn_after: {count: 1, period: hour}
+            error_after: {count: 6, period: hour}
+
+      - name: order_item
+        description: "注文明細テーブル"
+        columns:
+          - name: order_item_id
+            data_tests:
+              - unique
+              - not_null
+          - name: order_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('zakka_mall', 'order')
+                    field: order_id
+          - name: product_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('zakka_mall', 'product')
+                    field: product_id
+          - name: quantity
+            description: "数量"
+            data_tests:
+              - not_null
+          - name: unit_price
+            description: "単価"
+            data_tests:
+              - not_null
+          - name: line_total
+            description: "明細合計"
+            data_tests:
+              - not_null
+
+      - name: payment
+        description: "支払いテーブル"
+        columns:
+          - name: payment_id
+            data_tests:
+              - unique
+              - not_null
+          - name: order_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('zakka_mall', 'order')
+                    field: order_id
+          - name: payment_method
+            description: "支払い方法（credit_card: クレジットカード, bank_transfer: 銀行振込, cash_on_delivery: 現金払い, digital_wallet: デジタルウォレット）"
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['credit_card', 'bank_transfer', 'cash_on_delivery', 'digital_wallet']
+          - name: payment_status
+            description: "支払いステータス（pending: 保留, completed: 完了, failed: 失敗, refunded: 返金済）"
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['pending', 'completed', 'failed', 'refunded']
+          - name: gateway_response
+            description: "ゲートウェイレスポンス"
+
+      - name: shipment
+        description: "配送テーブル"
+        columns:
+          - name: shipment_id
+            data_tests:
+              - unique
+              - not_null
+          - name: order_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('zakka_mall', 'order')
+                    field: order_id
+          - name: tracking_number
+            description: "追跡番号"
+          - name: carrier
+            description: "キャリア"
+          - name: shipment_status
+            description: "配送ステータス（preparing: 準備中, shipped: 出荷済, in_transit: 運送中, delivered: 配達済, returned: 返送済）"
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['preparing', 'shipped', 'in_transit', 'delivered', 'returned']
