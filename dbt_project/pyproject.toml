@@ -1,0 +1,15 @@
+[project]
+name = "dbt-project-ch4-duckdb"
+version = "0.1.0"
+description = "dbt hands-on chapter 4 (DuckDB edition, no Docker)"
+readme = "../README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dbt-core",
+    "dbt-duckdb",
+    "duckdb",
+    "sqlfluff-templater-dbt",
+]
+
+[tool.uv]
+package = false
