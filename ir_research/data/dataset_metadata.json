@@ -1,0 +1,7 @@
+{
+  "repo": "mteb/JaGovFaqsRetrieval",
+  "max_chars": 400,
+  "documents": 22794,
+  "queries": 500,
+  "qrels": 500
+}
