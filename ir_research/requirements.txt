@@ -1,0 +1,7 @@
+boto3>=1.35,<2
+datasets>=3.0,<5
+numpy>=1.26,<3
+opensearch-py>=2.8,<4
+pgvector>=0.3,<1
+psycopg[binary]>=3.2,<4
+python-dotenv>=1.0,<2
