@@ -228,3 +228,8 @@ logs/
 *.wal
 *.backup
 *.duckdb
+
+.terraform
+
+ir_research/results
+ir_research/data
